@@ -1,7 +1,7 @@
 course := "progfun2"
 assignment := "codecs"
 
-scalaVersion := "3.0.0"
+scalaVersion := "3.2.0"
 
 scalacOptions ++= Seq("-deprecation")
 
