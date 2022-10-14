@@ -1,48 +1,50 @@
 package codecs
 
-/**
-  * A data type modeling JSON values.
+/** A data type modeling JSON values.
   *
   * For example, the `42` integer JSON value can be modeled as `Json.Num(42)`
   */
 enum Json:
   /** The JSON `null` value */
   case Null
+
   /** JSON boolean values */
   case Bool(value: Boolean)
+
   /** JSON numeric values */
   case Num(value: BigDecimal)
+
   /** JSON string values */
   case Str(value: String)
+
   /** JSON objects */
   case Obj(fields: Map[String, Json])
+
   /** JSON arrays */
   case Arr(items: List[Json])
 
-  /**
-   * Try to decode this JSON value into a value of type `A` by using
-   * the contextual decoder.
-   *
-   * Note that you have to explicitly fix `A` type parameter when you call the method:
-   *
-   * {{{
-   *   someJsonValue.decodeAs[User] // OK
-   *   someJsonValue.decodeAs       // Wrong!
-   * }}}
-   */
+  /** Try to decode this JSON value into a value of type `A` by using the
+    * contextual decoder.
+    *
+    * Note that you have to explicitly fix `A` type parameter when you call the
+    * method:
+    *
+    * {{{
+    *   someJsonValue.decodeAs[User] // OK
+    *   someJsonValue.decodeAs       // Wrong!
+    * }}}
+    */
   def decodeAs[A](using decoder: Decoder[A]): Option[A] =
-  decoder.decode(this)
+    decoder.decode(this)
 
-/**
-  * A type class that turns a value of type `A` into its JSON representation.
+/** A type class that turns a value of type `A` into its JSON representation.
   */
 trait Encoder[-A]:
 
   def encode(value: A): Json
 
-    /**
-    * Transforms this `Encoder[A]` into an `Encoder[B]`, given a transformation function
-    * from `B` to `A`.
+  /** Transforms this `Encoder[A]` into an `Encoder[B]`, given a transformation
+    * function from `B` to `A`.
     *
     * For instance, given a `Encoder[String]`, we can get an `Encoder[UUID]`:
     *
@@ -58,12 +60,10 @@ trait Encoder[-A]:
 
 object Encoder extends EncoderInstances:
 
-  /**
-   * Convenient method for creating an instance of encoder from a function `f`
-   */
+  /** Convenient method for creating an instance of encoder from a function `f`
+    */
   def fromFunction[A](f: A => Json) = new Encoder[A]:
     def encode(value: A): Json = f(value)
-
 
 trait EncoderInstances:
 
@@ -77,30 +77,27 @@ trait EncoderInstances:
 
   /** An encoder for `String` values */
   given Encoder[String] =
-    ??? // TODO Implement the `Encoder[String]` instance
+    Encoder.fromFunction(Json.Str(_))
 
   /** An encoder for `Boolean` values */
-  // TODO Define a given value of type `Encoder[Boolean]`
+  given Encoder[Boolean] =
+    Encoder.fromFunction(Json.Bool(_))
 
-  /**
-    * Encodes a list of values of type `A` into a JSON array containing
-    * the list elements encoded with the given `encoder`
+  /** Encodes a list of values of type `A` into a JSON array containing the list
+    * elements encoded with the given `encoder`
     */
-  given [A] (using encoder: Encoder[A]): Encoder[List[A]] = 
+  given [A](using encoder: Encoder[A]): Encoder[List[A]] =
     Encoder.fromFunction(as => Json.Arr(as.map(encoder.encode)))
 
-
-/**
-  * A specialization of `Encoder` that returns JSON objects only
+/** A specialization of `Encoder` that returns JSON objects only
   */
 trait ObjectEncoder[-A] extends Encoder[A]:
   // Refines the encoding result to `Json.Obj`
   def encode(value: A): Json.Obj
 
-  /**
-    * Combines `this` encoder with `that` encoder.
-    * Returns an encoder producing a JSON object containing both
-    * fields of `this` encoder and fields of `that` encoder.
+  /** Combines `this` encoder with `that` encoder. Returns an encoder producing
+    * a JSON object containing both fields of `this` encoder and fields of
+    * `that` encoder.
     */
   def zip[B](that: ObjectEncoder[B]): ObjectEncoder[(A, B)] =
     ObjectEncoder.fromFunction { case (a, b) =>
@@ -109,44 +106,42 @@ trait ObjectEncoder[-A] extends Encoder[A]:
 
 object ObjectEncoder:
 
-  /**
-    * Convenient method for creating an instance of object encoder from a function `f`
+  /** Convenient method for creating an instance of object encoder from a
+    * function `f`
     */
-  def fromFunction[A](f: A => Json.Obj): ObjectEncoder[A] = new ObjectEncoder[A]:
-    def encode(value: A): Json.Obj = f(value)
+  def fromFunction[A](f: A => Json.Obj): ObjectEncoder[A] =
+    new ObjectEncoder[A]:
+      def encode(value: A): Json.Obj = f(value)
 
-  /**
-    * An encoder for values of type `A` that produces a JSON object with one field
-    * named according to the supplied `name` and containing the encoded value.
+  /** An encoder for values of type `A` that produces a JSON object with one
+    * field named according to the supplied `name` and containing the encoded
+    * value.
     */
   def field[A](name: String)(using encoder: Encoder[A]): ObjectEncoder[A] =
     ObjectEncoder.fromFunction(a => Json.Obj(Map(name -> encoder.encode(a))))
 
-
-/**
-  * The dual of an encoder. Decodes a serialized value into its initial type `A`.
+/** The dual of an encoder. Decodes a serialized value into its initial type
+  * `A`.
   */
 trait Decoder[+A]:
-  /**
-    * @param data The data to de-serialize
-    * @return The decoded value wrapped in `Some`, or `None` if decoding failed
+  /** @param data
+    *   The data to de-serialize
+    * @return
+    *   The decoded value wrapped in `Some`, or `None` if decoding failed
     */
   def decode(data: Json): Option[A]
 
-  /**
-    * Combines `this` decoder with `that` decoder.
-    * Returns a decoder that invokes both `this` decoder and `that`
-    * decoder and returns a pair of decoded value in case both succeed,
-    * or `None` if at least one failed.
+  /** Combines `this` decoder with `that` decoder. Returns a decoder that
+    * invokes both `this` decoder and `that` decoder and returns a pair of
+    * decoded value in case both succeed, or `None` if at least one failed.
     */
   def zip[B](that: Decoder[B]): Decoder[(A, B)] =
     Decoder.fromFunction { json =>
       this.decode(json).zip(that.decode(json))
     }
 
-  /**
-    * Transforms this `Decoder[A]` into a `Decoder[B]`, given a transformation function
-    * from `A` to `B`.
+  /** Transforms this `Decoder[A]` into a `Decoder[B]`, given a transformation
+    * function from `A` to `B`.
     *
     * This operation is also known as “map”.
     */
@@ -155,18 +150,15 @@ trait Decoder[+A]:
 
 object Decoder extends DecoderInstances:
 
-  /**
-    * Convenient method to build a decoder instance from a function `f`
+  /** Convenient method to build a decoder instance from a function `f`
     */
   def fromFunction[A](f: Json => Option[A]): Decoder[A] = new Decoder[A]:
     def decode(data: Json): Option[A] = f(data)
 
-  /**
-    * Alternative method for creating decoder instances
+  /** Alternative method for creating decoder instances
     */
   def fromPartialFunction[A](pf: PartialFunction[Json, A]): Decoder[A] =
     fromFunction(pf.lift)
-
 
 trait DecoderInstances:
 
@@ -174,32 +166,36 @@ trait DecoderInstances:
   given Decoder[Unit] =
     Decoder.fromPartialFunction { case Json.Null => () }
 
-  /** A decoder for `Int` values. Hint: use the `isValidInt` method of `BigDecimal`. */
-  // TODO Define a given value of type `Decoder[Int]`
+  /** A decoder for `Int` values. Hint: use the `isValidInt` method of
+    * `BigDecimal`.
+    */
+  given intDecoder: Decoder[Int] =
+    Decoder.fromPartialFunction {
+      case x: Json.Num if x.value.isValidInt => x.value.toInt
+    }
 
   /** A decoder for `String` values */
-  // TODO Define a given value of type `Decoder[String]`
+  given stringDecoder: Decoder[String] =
+    Decoder.fromPartialFunction { case x: Json.Str => x.value }
 
   /** A decoder for `Boolean` values */
-  // TODO Define a given value of type `Decoder[Boolean]`
+  given boolDecoder: Decoder[Boolean] =
+    Decoder.fromPartialFunction { case x: Json.Bool => x.value }
 
-  /**
-    * A decoder for JSON arrays. It decodes each item of the array
-    * using the given `decoder`. The resulting decoder succeeds only
-    * if all the JSON array items are successfully decoded.
+  /** A decoder for JSON arrays. It decodes each item of the array using the
+    * given `decoder`. The resulting decoder succeeds only if all the JSON array
+    * items are successfully decoded.
     */
-  given [A] (using decoder: Decoder[A]): Decoder[List[A]] = 
+  given [A](using decoder: Decoder[A]): Decoder[List[A]] =
     Decoder.fromFunction {
       ???
     }
 
-  /**
-    * A decoder for JSON objects. It decodes the value of a field of
-    * the supplied `name` using the given `decoder`.
+  /** A decoder for JSON objects. It decodes the value of a field of the
+    * supplied `name` using the given `decoder`.
     */
   def field[A](name: String)(using decoder: Decoder[A]): Decoder[A] =
     ???
-
 
 case class Person(name: String, age: Int)
 
@@ -209,14 +205,14 @@ trait PersonCodecs:
 
   /** The encoder for `Person` */
   given Encoder[Person] =
-    ObjectEncoder.field[String]("name")
+    ObjectEncoder
+      .field[String]("name")
       .zip(ObjectEncoder.field[Int]("age"))
       .transform[Person](user => (user.name, user.age))
 
   /** The corresponding decoder for `Person` */
   given Decoder[Person] =
     ???
-
 
 case class Contacts(people: List[Person])
 
@@ -230,7 +226,6 @@ trait ContactsCodecs:
   // array of values of type `Person` (reuse the `Person` codecs)
   ()
 
-
 // In case you want to try your code, here is a simple `Main`
 // that can be used as a starting point. Otherwise, you can use
 // the REPL (use the `console` sbt task).
@@ -242,12 +237,11 @@ object Main:
     println(renderJson("foo"))
 
     val maybeJsonString = parseJson(""" "foo" """)
-    val maybeJsonObj    = parseJson(""" { "name": "Alice", "age": 42 } """)
-    val maybeJsonObj2   = parseJson(""" { "name": "Alice", "age": "42" } """)
+    val maybeJsonObj = parseJson(""" { "name": "Alice", "age": 42 } """)
+    val maybeJsonObj2 = parseJson(""" { "name": "Alice", "age": "42" } """)
     // Uncomment the following lines as you progress in the assignment
     // println(maybeJsonString.flatMap(_.decodeAs[Int]))
     // println(maybeJsonString.flatMap(_.decodeAs[String]))
     // println(maybeJsonObj.flatMap(_.decodeAs[Person]))
     // println(maybeJsonObj2.flatMap(_.decodeAs[Person]))
     // println(renderJson(Person("Bob", 66)))
-

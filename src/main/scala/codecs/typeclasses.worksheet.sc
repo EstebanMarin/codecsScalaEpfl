@@ -10,6 +10,22 @@ given RationalOrdering: Ordering[Rational] with
     if xn < yn then -1 else if xn > yn then 1 else 0
     ???
 
+case class Estudiante(nombre: String, nota: Int)
+val Ana = Estudiante("Ana", 7)
+val Sebastian = Estudiante("Sebastian", 8)
+val Esteban = Estudiante("Esteban", 5)
+val curso: List[Estudiante] = List(Ana, Sebastian, Esteban)
+val mejorEstudiante: Estudiante =
+  curso.reduce((estudiante1, estudiante2) =>
+    if estudiante1.nota > estudiante2.nota then estudiante1 else estudiante2
+  )
+val peorEstudiante: Estudiante =
+  curso.reduce((estudiante1, estudiante2) =>
+    if estudiante1.nota < estudiante2.nota then estudiante1 else estudiante2
+  )
+val mejoresQue5 =
+  curso
+  .filter(estudiante => estudiante.nota > 5)
 trait Semigroup[T]:
   extension (x: T) def combine(y: T): T
 
@@ -41,6 +57,6 @@ given productMonoid: Monoid[Int] with
 def sum(xs: List[Int]) = reduce(xs)(using sumMonoid)
 def prod(xs: List[Int]) = reduce(xs)(using productMonoid)
 
-val xs = List(1,2,3,4)
+val xs = List(1, 2, 3, 4)
 sum(xs)
 prod(xs)
