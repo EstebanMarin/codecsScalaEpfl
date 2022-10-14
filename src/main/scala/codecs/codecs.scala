@@ -186,56 +186,53 @@ trait DecoderInstances:
     * given `decoder`. The resulting decoder succeeds only if all the JSON array
     * items are successfully decoded.
     */
-given [A](using decoder: Decoder[A]): Decoder[List[A]] =
-  // Decode the provided `item` with the provided `decoder`. If this succeeds,
-  // return the decoded item **prepended** to the `previouslyDecodedItems`.
-  def decodeAndPrepend(
-      item: Json,
-      previouslyDecodedItems: List[A]
-  ): Option[List[A]] =
-    decoder.decode(item) match
-      case Some(x) => Some(x +: previouslyDecodedItems)
-      case None    => None
+  given [A](using decoder: Decoder[A]): Decoder[List[A]] = {
+    // Decode the provided `item` with the provided `decoder`. If this succeeds,
+    // return the decoded item **prepended** to the `previouslyDecodedItems`.
+    def decodeAndPrepend(
+        item: Json,
+        previouslyDecodedItems: List[A]
+    ): Option[List[A]] =
+      decoder.decode(item) match
+        case Some(x) => Some(x +: previouslyDecodedItems)
+        case None    => None
 
-  // Decode the provided `item` only if the previous items were successfully decoded.
-  // In case `maybePreviouslyDecodedItems` is `None` (which means that at least
-  // one of the previous items failed to be decoded), return `None`.
-  // Otherwise, decode the provided `item` and prepend it to the previously
-  // decoded items (use the method `decodeAndPrepend`).
-  def processItem(
-      item: Json,
-      maybePreviouslyDecodedItems: Option[List[A]]
-  ): Option[List[A]] =
-    maybePreviouslyDecodedItems match
-      case Some(x: List[A]) => decodeAndPrepend(item, x)
-      case None             => None
+    // Decode the provided `item` only if the previous items were successfully decoded.
+    // In case `maybePreviouslyDecodedItems` is `None` (which means that at least
+    // one of the previous items failed to be decoded), return `None`.
+    // Otherwise, decode the provided `item` and prepend it to the previously
+    // decoded items (use the method `decodeAndPrepend`).
+    def processItem(
+        item: Json,
+        maybePreviouslyDecodedItems: Option[List[A]]
+    ): Option[List[A]] =
+      maybePreviouslyDecodedItems match
+        case Some(x: List[A]) => decodeAndPrepend(item, x)
+        case None             => None
 
-  // Decodes all the provided JSON items. Fails if any item fails to
-  // be decoded.
-  // Iterates over the items, and tries to decode each item if the
-  // previous items could be successfully decoded.
-  def decodeAllItems(items: List[Json]): Option[List[A]] =
-    items.foldRight(Some(List.empty[A]))(processItem)
-  // Finally, write a decoder that checks whether the JSON value to decode
-  // is a JSON array.
-  //   - if it is the case, call `decodeAllItems` on the array items,
-  //   - otherwise, return a failure (`None`)
-  Decoder.fromFunction((x: Json) =>
-    x match
-      case x: Json.Arr => decodeAllItems(x.items)
-      case _           => None
-  )
+    // Decodes all the provided JSON items. Fails if any item fails to
+    // be decoded.
+    // Iterates over the items, and tries to decode each item if the
+    // previous items could be successfully decoded.
+    def decodeAllItems(items: List[Json]): Option[List[A]] =
+      items.foldRight(Some(List.empty[A]))(processItem)
+    // Finally, write a decoder that checks whether the JSON value to decode
+    // is a JSON array.
+    //   - if it is the case, call `decodeAllItems` on the array items,
+    //   - otherwise, return a failure (`None`)
+    Decoder.fromFunction((x: Json) =>
+      x match
+        case x: Json.Arr => decodeAllItems(x.items)
+        case _           => None
+    )
 
-/** A decoder for JSON objects. It decodes the value of a field of the supplied
-  * `name` using the given `decoder`.
-  */
-def field[A](name: String)(using decoder: Decoder[A]): Decoder[A] =
-  Decoder.fromPartialFunction { case x: Json.Obj =>
-    summon[Decoder[A]].decode(x.fields.getOrElse(name, Json.Null)) match
-      case Some(x) => x
-      // TODO handle incorrect name
-      case None => ???
   }
+
+  /** A decoder for JSON objects. It decodes the value of a field of the
+    * supplied `name` using the given `decoder`.
+    */
+  def field[A](name: String)(using decoder: Decoder[A]): Decoder[A] =
+    ???
 
 case class Person(name: String, age: Int)
 
