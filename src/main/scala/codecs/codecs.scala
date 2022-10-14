@@ -285,8 +285,8 @@ object Main:
     val maybeJsonObj = parseJson(""" { "name": "Alice", "age": 42 } """)
     val maybeJsonObj2 = parseJson(""" { "name": "Alice", "age": "42" } """)
     // Uncomment the following lines as you progress in the assignment
-    // println(maybeJsonString.flatMap(_.decodeAs[Int]))
-    // println(maybeJsonString.flatMap(_.decodeAs[String]))
-    // println(maybeJsonObj.flatMap(_.decodeAs[Person]))
-    // println(maybeJsonObj2.flatMap(_.decodeAs[Person]))
-    // println(renderJson(Person("Bob", 66)))
+    println(maybeJsonString.flatMap(_.decodeAs[Int]))
+    println(maybeJsonString.flatMap(_.decodeAs[String]))
+    println(maybeJsonObj.flatMap(_.decodeAs[Person]))
+    println(maybeJsonObj2.flatMap(_.decodeAs[Person]))
+    println(renderJson(Person("Bob", 66)))
