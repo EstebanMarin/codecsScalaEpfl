@@ -239,7 +239,6 @@ trait DecoderInstances:
         case None => ???
     }
 
-
 case class Person(name: String, age: Int)
 
 object Person extends PersonCodecs
@@ -255,7 +254,10 @@ trait PersonCodecs:
 
   /** The corresponding decoder for `Person` */
   given Decoder[Person] =
-    ???
+    Decoder
+      .field[String]("name")
+      .zip(Decoder.field[Int]("age"))
+      .transform[Person]((name, age) => Person(name, age))
 
 case class Contacts(people: List[Person])
 
