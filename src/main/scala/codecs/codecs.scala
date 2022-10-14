@@ -232,7 +232,13 @@ trait DecoderInstances:
     * supplied `name` using the given `decoder`.
     */
   def field[A](name: String)(using decoder: Decoder[A]): Decoder[A] =
-    ???
+    Decoder.fromPartialFunction { case x: Json.Obj =>
+      summon[Decoder[A]].decode(x.fields.getOrElse(name, Json.Null)) match
+        case Some(x) => x
+        // TODO handle incorrect name
+        case None => ???
+    }
+
 
 case class Person(name: String, age: Int)
 
